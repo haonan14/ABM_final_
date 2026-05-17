@@ -13,18 +13,7 @@ MACSS 40550 — Agent-Based Modeling, Spring 2026.
 
 ```bash
 pip install mesa[viz] networkx numpy
-cd scientific_conservatism
 solara run app.py
-```
-
-## Experiments
-
-Batch experiments and analysis scripts are in `_support/`:
-
-```bash
-python _support/experiments.py      # runs all 5 experiments (30 reps each)
-python _support/analyze_results.py  # prints summary tables
-python _support/generate_paper.py   # regenerates draft_paper.docx
 ```
 
 ## Parameters

@@ -23,11 +23,14 @@ model_params = {
     "seed": 42,
 }
 
-# Two custom panels:
-#   1. Landscape view: topics as dots positioned by (recognizability, EP),
-#      sized by agent count — shows the "flow" from safe zone to frontier
-#   2. Agent scatter: each scientist plotted by (rbc, intrinsic_conservatism),
-#      colored by which type of topic they chose — shows who explores
+# Here I consulted AI, for how to do custom visualization panels in Mesa's SolaraViz
+# framework. The default plots only show time-series data, but I wanted a spatial
+# view of the landscape and a scatter of agent strategies. I couldn't find documentation
+# on how to write custom Solara components that hook into Mesa's reactive update cycle,
+# so AI showed me how to use update_counter.get() to trigger re-renders and how to
+# wrap matplotlib figures with solara.FigureMatplotlib. I think the two-panel approach
+# (landscape + agent scatter) gives a good intuition for what's happening even if
+# the plots are fairly simple.
 
 
 @solara.component
@@ -36,18 +39,17 @@ def LandscapeView(model):
     update_counter.get()
     G = model.landscape
 
-    # Count agents per topic this step
     agent_counts = {}
     for a in model.agents_by_type[Scientist]:
         if a.selected_topic is not None:
             agent_counts[a.selected_topic] = agent_counts.get(a.selected_topic, 0) + 1
 
-    type_colors = {"established": "#6baed6", "recognizable": "#fd8d3c", "radical": "#e34a33"}
+    type_colors = {"established": "steelblue", "recognizable": "orange", "radical": "firebrick"}
 
     fig = Figure(figsize=(6, 4.5))
     ax = fig.add_subplot()
 
-    # Position topics by INITIAL values so dots don't drift with domestication
+    # position by initial values so dots don't drift with domestication
     for n, d in G.nodes(data=True):
         count = agent_counts.get(n, 0)
         color = type_colors[d["node_type"]]
@@ -58,7 +60,6 @@ def LandscapeView(model):
             s=size, c=color, alpha=alpha, edgecolors="none",
         )
 
-    # Legend
     for label, color in type_colors.items():
         ax.scatter([], [], c=color, s=40, label=label, alpha=0.8)
     ax.legend(loc="upper left", fontsize=7, framealpha=0.8)
@@ -80,11 +81,11 @@ def AgentScatter(model):
     colored by which topic type they selected this step."""
     update_counter.get()
     G = model.landscape
-    type_colors = {"established": "#6baed6", "recognizable": "#fd8d3c", "radical": "#e34a33"}
+    type_colors = {"established": "steelblue", "recognizable": "orange", "radical": "firebrick"}
 
     rbcs, ics, colors = [], [], []
     for a in model.agents_by_type[Scientist]:
-        rbcs.append(a.risk_bearing_capacity)
+        rbcs.append(a.get_rbc())
         ics.append(a.intrinsic_conservatism)
         if a.selected_topic is not None:
             ttype = G.nodes[a.selected_topic]["node_type"]
@@ -111,7 +112,7 @@ def AgentScatter(model):
     solara.FigureMatplotlib(fig, format="png", bbox_inches="tight")
 
 
-# DV time-series plots (CC and RER use smoothed versions to reduce noise)
+# smoothed versions for CC and RER (raw data too noisy)
 conservatism_plot = make_plot_component(
     {"CC_Smoothed": "tab:blue"}, backend="matplotlib")
 exploration_plot = make_plot_component(
